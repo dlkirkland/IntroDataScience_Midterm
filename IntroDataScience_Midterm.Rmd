@@ -1,0 +1,138 @@
+---
+title: "IntroDataScience_Midterm"
+output:
+  html_document:
+    df_print: paged
+name: Daniel Kirkland
+---
+
+In order to analyzing sales for a bookstore, we will import two datasets which contain data related to sales revenue as well as customer, item, and purchase information.  First, we will install the packages necessary to import and modify the data.  Then, we will perform the import process.
+
+First, install the required libraries...
+
+```{r results='hide'}
+install.packages("tidyverse")
+library(tidyverse)
+```
+The 'sales' data provides sales figures (in thousands of dollars) per month, across the different products sold in the bookstore, including: food, drinks, textbooks, supplies, apparel, accessories, computers and electronics, and finally health, beauty, and fitness products.
+
+Importing the 'sales.csv' file...
+
+```{r results='hide'}
+sales <- read_csv("sales.csv")
+```
+Let's take a look at the 'sales' data...
+
+```{r}
+sales
+
+
+```
+We can see that the dataset lists a column for each "month-year" for which data was gathered for each item sold.  We can convert these into a single column and create a new column which shows revenue per item for each "month_year" observed.  We can also change the name of "revenue_earned_for_item" to indicate that the values associated with the revenue indicate unit: thousands. 
+
+```{r}
+sales_copy <- sales
+sales_copy <- gather(sales_copy, "month_year", "revenue_earned_for_item", 2:23)
+sales <- sales_copy
+colnames(sales)[colnames(sales) == "revenue_earned_for_item"] <- "revenue_earned_for_item(thousands)"
+levels(sales$item_type)
+sales
+
+```
+Now for more clarity, lets change the column name of "category of inventory goods" to a shorter title: "item_type" and see the levels, i.e. range of options, for the types of items the bookstore sells.
+
+```{r}
+colnames(sales)[colnames(sales) == "category of inventory goods"] <- "item_type"
+levels(sales$item_type)
+sales
+
+```
+We can convert the values associated with "item_type" to categories, since there are a finite number of item types sold by the bookstore.  
+
+```{r}
+sales$item_type <- as.factor(sales$item_type)
+sales
+```
+Now that the "sales" dataset has been cleaned up a bit, lets import and explore the "register" dataset.  The register dataset contains raw data collected by a Point Of Sale system that processes purchases made in the bookstore. The data gathered is ordered into the following columns:
+
+    * **purchase** - a unique number for each check-out, listed chronologically
+    * **item** - the bar code or product id number for an item being purchased
+    * **charge** - identifies whether the receipt item is the cost of the item or if it is the affiliated tax on that item
+    * **price** - associated cost to the customer for the charge
+    * **is the customer a student/faculty/staff (0) or unaffiliated (1)** - identifies when the customer uses the system with their         customer id, which is only available for students, faculty, and staff at the university. Everyone else is treated as 
+        unaffiliated
+    * **customer id** - the ID number of the customer when they enter it at purchase
+    * **receipt** - records whether or not the customer requests a receipt for their purchase
+    * **contact preference** - stores the customer's preferred means of contact, including options for: email, mail, fax, and phone
+    * **newsletter** - stores the customer's preference about whether or not they want to receive the bookstore newsletter
+    * **sales** - keeps track of whether or not the customer wants notifications about special sales
+    * **preferred customer discount** - identifies if the customer has qualified for special discounts
+    
+Lets read in the "register" dataset...
+    
+```{r results='hide'}
+register <- read_csv("register.csv")
+```
+Now imported, let's take a look at the "register" data. 
+
+```{r}
+register  
+```
+
+It's apparent that there are duplicate rows for each purchase made.  The cause for the duplication is separation of "charge" data into it's constituent parts: net cost (item cost excluding tax) and tax (tax charged for item purchased).  We can separate these values into two separate columns to remove duplicate purchase records.  Let's perform the separation after cleaning up the column names and correcting for missing data.  
+
+```{r}
+#register_copy <- spread(register, charge, price)
+#register_copy <- separate(register, charge, c("net_cost", "tax_charged"))
+#register_copy <- gather(register, "cost", "revenue_earned_for_item", price)
+#View(register_copy)
+
+```
+
+
+
+There appear to be many more columns/variables in the "register" dataset than were in the "sales" dataset.  Let's see which columns define the dataset...
+
+```{r}
+colnames(register)
+```
+Let's update some of the column names to be more descriptive.
+
+```{r}
+colnames(register)[colnames(register) == "purchase"] <- "purchase_id"
+colnames(register)[colnames(register) == "item"] <- "item_id"
+colnames(register)[colnames(register) == "charge"] <- "charge_cost/tax"
+colnames(register)[colnames(register) == "price"] <- "paid_cost/tax"
+colnames(register)[colnames(register) == "is the customer a student/faculty/staff (0) or unaffiliated (1)"] <- "university_affiliate"
+colnames(register)[colnames(register) == "customer id"] <- "customer_id"
+colnames(register)[colnames(register) == "receipt"] <- "receipt_issued"
+colnames(register)[colnames(register) == "contact preference"] <- "preferred_contact_method"
+colnames(register)[colnames(register) == "newsletter"] <- "newsletter_requested"
+colnames(register)[colnames(register) == "sales"] <- "contact_for_future_sales"
+colnames(register)[colnames(register) == "preferred customer discount"] <- "qualified_for_discount"
+colnames(register)
+
+```
+Now, we can account for any missing values...
+
+```{r}
+library(dplyr)
+register %>%
+    mutate(customer_id=ifelse(customer_id=="--", "NA", customer_id))
+
+register %>%
+    mutate(preferred_contact_method=ifelse(preferred_contact_method=="--", "NA", preferred_contact_method))
+
+register %>%
+    mutate(newsletter_requested=ifelse(newsletter_requested=="--", "NA", newsletter_requested))
+    
+register %>%
+    mutate(contact_for_future_sales=ifelse(contact_for_future_sales=="--", "NA", contact_for_future_sales))
+    
+register %>%
+    mutate(qualified_for_discount=ifelse(qualified_for_discount=="--", "NA", qualified_for_discount))
+View(register)
+```
+
+
+
